@@ -6,9 +6,18 @@ import os
 SMTP_SERVER = "smtp.gmail.com"
 SMTP_PORT = 587
 
+# Brand colours used in the email
+COMPANY_STYLES = {
+    "Microsoft": {"color": "#0078d4", "gradient": "linear-gradient(135deg, #0078d4 0%, #00bcf2 100%)"},
+    "Amazon":    {"color": "#ff9900", "gradient": "linear-gradient(135deg, #ff9900 0%, #ffbf00 100%)"},
+}
+DEFAULT_STYLE = {"color": "#333333", "gradient": "linear-gradient(135deg, #555 0%, #888 100%)"}
+
+
 def send_email(new_jobs):
     """
     Sends an email notification with the list of new jobs.
+    Each job dict may contain a 'company' key (e.g. "Microsoft", "Amazon").
     Returns True if email was sent successfully, False otherwise.
     """
     sender_email = os.environ.get("EMAIL_ADDRESS")
@@ -29,8 +38,12 @@ def send_email(new_jobs):
     print(f"Preparing email to {receiver_email}...")
     print(f"Number of new jobs to notify: {len(new_jobs)}")
 
+    # Figure out which companies are represented
+    companies = sorted(set(j.get("company", "Unknown") for j in new_jobs))
+    companies_label = " & ".join(companies) if companies else "Job"
+
     msg = MIMEMultipart("alternative")
-    msg["Subject"] = f"🚀 {len(new_jobs)} New Microsoft Job(s) Found!"
+    msg["Subject"] = f"🚀 {len(new_jobs)} New {companies_label} Job(s) Found!"
     msg["From"] = sender_email
     msg["To"] = receiver_email
 
@@ -54,7 +67,7 @@ def send_email(new_jobs):
                 overflow: hidden;
             }
             .header {
-                background: linear-gradient(135deg, #0078d4 0%, #00bcf2 100%);
+                background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
                 color: white;
                 padding: 24px;
                 text-align: center;
@@ -63,8 +76,15 @@ def send_email(new_jobs):
                 margin: 0;
                 font-size: 24px;
             }
+            .section-header {
+                padding: 14px 24px 6px 24px;
+                font-size: 13px;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
+            }
             .content {
-                padding: 24px;
+                padding: 12px 24px 24px 24px;
             }
             .job-card { 
                 border: 1px solid #e1e1e1; 
@@ -75,11 +95,18 @@ def send_email(new_jobs):
                 transition: all 0.2s ease;
             }
             .job-card:hover {
-                border-color: #0078d4;
-                box-shadow: 0 2px 4px rgba(0,120,212,0.1);
+                box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            }
+            .company-badge {
+                display: inline-block;
+                font-size: 11px;
+                font-weight: 600;
+                padding: 3px 8px;
+                border-radius: 4px;
+                color: #fff;
+                margin-bottom: 8px;
             }
             .job-title { 
-                color: #0078d4; 
                 font-size: 18px; 
                 font-weight: 600; 
                 margin: 0 0 8px 0;
@@ -91,16 +118,12 @@ def send_email(new_jobs):
             }
             .apply-btn {
                 display: inline-block;
-                background-color: #0078d4;
                 color: white !important;
                 padding: 10px 20px;
                 text-decoration: none;
                 border-radius: 4px;
                 font-weight: 500;
                 font-size: 14px;
-            }
-            .apply-btn:hover {
-                background-color: #106ebe;
             }
             .footer {
                 background-color: #f5f5f5;
@@ -115,29 +138,45 @@ def send_email(new_jobs):
     <body>
         <div class="container">
             <div class="header">
-                <h1>🎯 New Microsoft Jobs Alert!</h1>
-                <p style="margin: 8px 0 0 0; opacity: 0.9;">""" + f"{len(new_jobs)} new position{'s' if len(new_jobs) > 1 else ''} matching your criteria" + """</p>
+                <h1>🎯 New Jobs Alert!</h1>
+                <p style="margin: 8px 0 0 0; opacity: 0.9;">""" + f"{len(new_jobs)} new position{'s' if len(new_jobs) > 1 else ''} across {companies_label}" + """</p>
             </div>
             <div class="content">
     """
 
+    # Group jobs by company so the email reads nicely
+    from collections import OrderedDict
+    grouped = OrderedDict()
     for job in new_jobs:
-        title = job.get('title', 'Unknown Role')
-        location = job.get('location', 'Unknown Location')
-        link = job.get('link', '#')
-        
+        company = job.get("company", "Other")
+        grouped.setdefault(company, []).append(job)
+
+    for company, jobs in grouped.items():
+        style = COMPANY_STYLES.get(company, DEFAULT_STYLE)
+        accent = style["color"]
+
         html_content += f"""
-            <div class="job-card">
-                <h3 class="job-title">{title}</h3>
-                <p class="job-location">📍 {location}</p>
-                <a href="{link}" class="apply-btn">View Job →</a>
-            </div>
+            <div class="section-header" style="color: {accent};">{company} &mdash; {len(jobs)} new</div>
         """
+
+        for job in jobs:
+            title = job.get('title', 'Unknown Role')
+            location = job.get('location', 'Unknown Location')
+            link = job.get('link', '#')
+
+            html_content += f"""
+            <div class="job-card" style="border-left: 4px solid {accent};">
+                <span class="company-badge" style="background-color: {accent};">{company}</span>
+                <h3 class="job-title" style="color: {accent};">{title}</h3>
+                <p class="job-location">📍 {location}</p>
+                <a href="{link}" class="apply-btn" style="background-color: {accent};">View Job →</a>
+            </div>
+            """
 
     html_content += """
             </div>
             <div class="footer">
-                <p>This email was sent by your Microsoft Job Alert Bot.</p>
+                <p>This email was sent by your Job Alert Bot.</p>
                 <p>Powered by automated job monitoring 🤖</p>
             </div>
         </div>

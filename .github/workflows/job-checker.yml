@@ -1,4 +1,4 @@
-name: Microsoft Job Checker
+name: Job Checker (Microsoft + Amazon)
 
 on:
   schedule:
@@ -39,5 +39,5 @@ jobs:
       run: |
         git config --global user.name 'GitHub Action'
         git config --global user.email 'action@github.com'
-        git add data/known_jobs.json
+        git add data/known_jobs.json data/known_amazon_jobs.json
         git diff --quiet && git diff --staged --quiet || (git commit -m "Update known jobs [skip ci]" && git push)
