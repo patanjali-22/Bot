@@ -9,6 +9,34 @@ JOB_URL = "https://apply.careers.microsoft.com/careers?query=Software+engineer&s
 # API endpoint used by the Microsoft Careers page (Phenom PCS platform)
 SEARCH_API_URL = "https://apply.careers.microsoft.com/api/pcs/search"
 
+# ---------------------------------------------------------------------------
+# Title filter – only keep junior / entry-level engineering roles
+# ---------------------------------------------------------------------------
+# Keywords that mark a role as too senior / higher-cadre
+_SENIOR_KEYWORDS = [
+    "senior", "sr.", "sr ", "staff", "principal", "partner",
+    "distinguished", "lead", "manager", "director", "vp",
+    "vice president", "chief", "head of", "architect",
+    "level 3", "level 4", "level 5",  # Microsoft L63+ style
+    "swe iii", "swe iv", "swe v",
+    "engineer iii", "engineer iv", "engineer v",
+    "engineer 3", "engineer 4", "engineer 5",
+]
+
+
+def is_junior_role(title: str) -> bool:
+    """
+    Return True only for entry-level / junior roles such as
+    Software Engineer, Software Engineer 1, Software Engineer 2, SDE I, SDE II, etc.
+    Returns False for senior, staff, principal, lead, manager, director, etc.
+    """
+    lower = title.lower().strip()
+    for kw in _SENIOR_KEYWORDS:
+        if kw in lower:
+            return False
+    return True
+
+
 async def get_latest_jobs():
     """
     Scrapes the Microsoft Careers page for the latest job postings.
@@ -206,7 +234,10 @@ async def get_latest_jobs():
         finally:
             await browser.close()
     
-    print(f"Total jobs found: {len(jobs)}")
+    # Filter out senior / higher-cadre roles – keep only junior positions
+    before_filter = len(jobs)
+    jobs = [j for j in jobs if is_junior_role(j.get("title", ""))]
+    print(f"Total jobs found: {before_filter}  |  After junior-role filter: {len(jobs)}")
     return jobs
 
 if __name__ == "__main__":
