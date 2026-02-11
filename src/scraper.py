@@ -9,6 +9,23 @@ JOB_URL = "https://apply.careers.microsoft.com/careers?query=Software+engineer&s
 # API endpoint used by the Microsoft Careers page (Phenom PCS platform)
 SEARCH_API_URL = "https://apply.careers.microsoft.com/api/pcs/search"
 
+# ---------------------------------------------------------------------------
+# Title-level filter: keep only entry-to-mid level Software Engineer roles
+# (e.g. "Software Engineer", "Software Engineer II") and exclude senior+.
+# ---------------------------------------------------------------------------
+EXCLUDE_TITLE_PATTERNS = re.compile(
+    r"\b(senior|sr\.?|staff|principal|lead|manager|director|vp|distinguished|partner|architect)\b",
+    re.IGNORECASE,
+)
+
+
+def is_target_level(title: str) -> bool:
+    """Return True if *title* looks like an entry-to-mid level SWE role."""
+    if "software engineer" not in title.lower():
+        return False
+    return not EXCLUDE_TITLE_PATTERNS.search(title)
+
+
 async def get_latest_jobs():
     """
     Scrapes the Microsoft Careers page for the latest job postings.
@@ -69,7 +86,7 @@ async def get_latest_jobs():
                         if not link and job_id:
                             link = f"https://apply.careers.microsoft.com/careers/job/{job_id}"
                         
-                        if job_id and not any(j["id"] == job_id for j in jobs):
+                        if job_id and not any(j["id"] == job_id for j in jobs) and is_target_level(str(title)):
                             jobs.append({
                                 "id": job_id,
                                 "title": str(title)[:100],
@@ -154,7 +171,7 @@ async def get_latest_jobs():
                             except:
                                 continue
                         
-                        if not any(j["id"] == job_id for j in jobs):
+                        if not any(j["id"] == job_id for j in jobs) and is_target_level(title):
                             jobs.append({
                                 "id": job_id,
                                 "title": title[:100],
@@ -184,13 +201,15 @@ async def get_latest_jobs():
                                         data = json.loads(match)
                                         if isinstance(data, dict) and any(k in data for k in ["jobTitle", "title", "position_title"]):
                                             job_id = str(data.get("id", hash(str(data)) % 100000))
-                                            jobs.append({
-                                                "id": job_id,
-                                                "title": data.get("jobTitle") or data.get("title", "Unknown"),
-                                                "location": data.get("location", "United States"),
-                                                "link": data.get("url", JOB_URL),
-                                                "found_at": datetime.datetime.now().isoformat()
-                                            })
+                                            job_title = data.get("jobTitle") or data.get("title", "Unknown")
+                                            if is_target_level(str(job_title)):
+                                                jobs.append({
+                                                    "id": job_id,
+                                                    "title": job_title,
+                                                    "location": data.get("location", "United States"),
+                                                    "link": data.get("url", JOB_URL),
+                                                    "found_at": datetime.datetime.now().isoformat()
+                                                })
                                     except json.JSONDecodeError:
                                         continue
                         except:
