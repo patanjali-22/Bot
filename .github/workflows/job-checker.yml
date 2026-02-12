@@ -1,43 +1,43 @@
-name: Job Checker (Microsoft + Amazon)
+# name: Job Checker (Microsoft + Amazon)
 
-on:
-  schedule:
-    - cron: '*/15 * * * *'  # Runs every 15 minutes
-  workflow_dispatch:      # Allows manual trigger
+# on:
+#   schedule:
+#     - cron: '*/15 * * * *'  # Runs every 15 minutes
+#   workflow_dispatch:      # Allows manual trigger
 
-permissions:
-  contents: write
+# permissions:
+#   contents: write
 
-jobs:
-  check-jobs:
-    runs-on: ubuntu-22.04
+# jobs:
+#   check-jobs:
+#     runs-on: ubuntu-22.04
 
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+#     steps:
+#     - name: Checkout code
+#       uses: actions/checkout@v3
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.10'
+#     - name: Set up Python
+#       uses: actions/setup-python@v4
+#       with:
+#         python-version: '3.10'
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        playwright install chromium
-        playwright install-deps
+#     - name: Install dependencies
+#       run: |
+#         python -m pip install --upgrade pip
+#         pip install -r requirements.txt
+#         playwright install chromium
+#         playwright install-deps
 
-    - name: Run Job Checker
-      env:
-        EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
-        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
-        NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
-      run: python src/main.py
+#     - name: Run Job Checker
+#       env:
+#         EMAIL_ADDRESS: ${{ secrets.EMAIL_ADDRESS }}
+#         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+#         NOTIFY_EMAIL: ${{ secrets.NOTIFY_EMAIL }}
+#       run: python src/main.py
 
-    - name: Commit and Push if Changed
-      run: |
-        git config --global user.name 'GitHub Action'
-        git config --global user.email 'action@github.com'
-        git add data/known_jobs.json data/known_amazon_jobs.json
-        git diff --quiet && git diff --staged --quiet || (git commit -m "Update known jobs [skip ci]" && git push)
+#     - name: Commit and Push if Changed
+#       run: |
+#         git config --global user.name 'GitHub Action'
+#         git config --global user.email 'action@github.com'
+#         git add data/known_jobs.json data/known_amazon_jobs.json
+#         git diff --quiet && git diff --staged --quiet || (git commit -m "Update known jobs [skip ci]" && git push)
